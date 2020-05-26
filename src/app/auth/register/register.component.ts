@@ -36,7 +36,7 @@ export class RegisterComponent implements OnInit {
     const { nombre, correo, password } = this.registroFG.value;
     this.auth
       .crearUsuario(nombre, correo, password)
-      .then((credenciales) => {
+      .then(() => {
         Swal.close();
         this.router.navigate(['/']);
       })
