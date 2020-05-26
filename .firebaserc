@@ -1,0 +1,11 @@
+{
+  "targets": {
+    "ngrx-be559": {
+      "hosting": {
+        "ingresos-egresos": [
+          "ngrx-be559"
+        ]
+      }
+    }
+  }
+}
