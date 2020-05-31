@@ -1,20 +1,40 @@
 import { Injectable } from '@angular/core';
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
-import { map } from 'rxjs/operators';
+import { map, tap, switchMap } from 'rxjs/operators';
 import { Usuario } from './../models/usuario.model';
+import { Store } from '@ngrx/store';
+import { AppState } from './../app.reducer';
+import * as auth from '../auth/auth.actions';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   constructor(
-    public auth: AngularFireAuth,
-    public firestore: AngularFirestore
+    public authS: AngularFireAuth,
+    public firestore: AngularFirestore,
+    private store: Store<AppState>
   ) {}
 
   initAuthListener() {
-    this.auth.authState.subscribe((user) => console.log(user));
+    this.authS.authState
+      .pipe(
+        switchMap((fbUser) =>
+          !!fbUser
+            ? this.firestore.doc(`${fbUser.uid}/usuario`).valueChanges()
+            : of(null)
+        ),
+        tap((user) =>
+          !!user
+            ? this.store.dispatch(
+                auth.setUser({ user: Usuario.fromFirebase(user) })
+              )
+            : this.store.dispatch(auth.unSetUser())
+        )
+      )
+      .subscribe();
   }
 
   crearUsuario(
@@ -22,7 +42,7 @@ export class AuthService {
     correo: string,
     password: string
   ): Promise<void> {
-    return this.auth
+    return this.authS
       .createUserWithEmailAndPassword(correo, password)
       .then(({ user }) => {
         const newUser = new Usuario(user.uid, nombre, correo);
@@ -34,14 +54,14 @@ export class AuthService {
     correo: string,
     password: string
   ): Promise<firebase.auth.UserCredential> {
-    return this.auth.signInWithEmailAndPassword(correo, password);
+    return this.authS.signInWithEmailAndPassword(correo, password);
   }
 
   logout(): Promise<void> {
-    return this.auth.signOut();
+    return this.authS.signOut();
   }
 
   isAuth() {
-    return this.auth.authState.pipe(map((fbUser) => !!fbUser));
+    return this.authS.authState.pipe(map((fbUser) => !!fbUser));
   }
 }
